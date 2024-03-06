@@ -14,17 +14,11 @@ options(scipen = 999)
 
 # Chargement des données d'étude dans un data frame "declarations_etude"
 declarations_etude <- read.csv("donnees_detude.csv", header = TRUE, sep = ",", dec = ".", stringsAsFactors = TRUE)
-# Chargement des données pour prediction dans un data frame "declarations_a_predire"
-declarations_a_predire <- read.csv("donnees_a_predire.csv", header = TRUE, sep = ",", dec = ".", stringsAsFactors = TRUE)
 
 View(declarations_etude)
-View(declarations_a_predire)
 
 # Vérification du chargement des données dans le data frame declarations_etude en affichant la liste des variables et leur type
 str(declarations_etude)
-# Vérification du chargement des données dans le data frame declarations_a_predire en affichant la liste des variables et leur type
-str(declarations_a_predire) 
-# On remarque que le data frame contenant les déclarations à prédire ne contient pas de colonnes fraudilent
 
 
 
@@ -34,8 +28,6 @@ str(declarations_a_predire)
 # On retire lles deux premières colonnes car nous ne les estimons pas utiles pour la prédiction
 declarations_etude <- declarations_etude[,-(1:2)]
 str(declarations_etude)
-#declarations_a_predire <- declarations_a_predire[,-(1:2)]
-#str(declarations_a_predire)
 
 # On visualise le data frame pour essayer de détecter des anomalies visuellement (dans un premier temps)
 View(declarations_etude)
@@ -99,9 +91,14 @@ if (!is.numeric(declarations_etude$claim_amount)) {
 
 # --------- 3. Définition de la méthode d'évaluation des classifieurs  ---------
 
-# Nous testerons plusieurs algorithme de classifications durant notre analys : rpart, C50 et tree
+# Nous testerons plusieurs algorithme de classifications durant notre analys : rpart, C50 et treeinstall.packages("rpart")
+#install.packages("rpart")
 library(rpart)
+#install.packages("rpart.plot")
+library(rpart.plot)
+#install.packages("C50")
 library(C50)
+#install.packages("tree")
 library(tree)
 
 # Il est possible d'appliquer des paramètres pour l’apprentissage des arbres de décision rpart, c50 et tree.
@@ -132,14 +129,14 @@ for (classe in unique(declarations_etude)) { # pour chaque classe dans le data f
 if (equilibre) {
   cat("Les classes du data frame sont équilibrés")
 }
-# Puis que les classes du data frame sont équilibrés, il  est dans l'intéré de notre projet, d'utiliser le paramètre split=gini index
+# Puisque les classes du data frame sont équilibrés, il  est dans l'intéré de notre projet, d'utiliser le paramètre split=gini index
 
 # Le paramètre minbucket contrôle le nombre minimum d'observations requis dans un noeud terminal.
 # Augmenter la valeur de minbucket permet de créer des arbres plus petits et moins complexes, ce qui peut réduire le risque de surajustement.
 # Il est conseillé d'utiliser des valeurs comme 5 ou 10 pour expérimenter avec le paramètre minbucket.
 # Nous avons décider d'utiliser la valeur la plus petite, soit 5.
 
-# Afin d'identifier le meilleur classificateur, c'est-à-dire le plus pertinent pour la détection de fraudes, nous évalurons leurs taux de succès/échecs et leurs matrices de confusions
+# Afin d'identifier le meilleur classificateur, c'est-à-dire le plus pertinent pour la détection de fraudes, nous évalurons leurs taux de succès/échecs, leurs matrices de confusions, leurs courbes ROC et indices AUC
 
 
 
@@ -158,7 +155,7 @@ cat("Taille de l'ensemble de test : ", nrow(declaration_ET), "\n")
 
 
 # --------- 5. Construction et évaluation des classifieurs  ---------
-# --------- 5.A. RPART ---------
+# --------- 5.1.A. Arbre de décision RPART ---------
 ? rpart()
 
 # On construit notre arbre de décision rpart
@@ -170,7 +167,7 @@ text(rpart_tree, pretty=0)
 
 # Après avoir essayé différentes valeurs pour le paramètre minbucket, rester à 5 est plus pertinent.
 
-#On applique l'arbre de decision Rpart sur notre ensemble de test
+# On applique l'arbre de decision Rpart sur notre ensemble de test
 test_rpart_tree <- predict(rpart_tree, declaration_ET, type="class")
 
 declaration_ET$tree1 <- test_rpart_tree
@@ -181,7 +178,7 @@ cat("Taux de succes de l'arbre de décision Rpart sur l'ensemble de test : ", ta
 
 
 
-# --------- 5.B. C50 ---------
+# --------- 5.1.B. Arbre de décision C50 ---------
 ? C5.0()
 
 # On construit notre arbre de décision C50
@@ -192,7 +189,7 @@ plot(c50_tree)
 
 # Après avoir essayé différentes valeurs pour le paramètre minbucket, rester à 5 est plus pertinent.
 
-#On applique l'arbre de decision Rpart sur notre ensemble de test
+# On applique l'arbre de decision C50 sur notre ensemble de test
 test_c50_tree <- predict(c50_tree, declaration_ET, type="class")
 
 declaration_ET$tree2 <- test_c50_tree
@@ -203,7 +200,7 @@ cat("Taux de succes de l'arbre de décision C5.0 sur l'ensemble de test : ", tau
 
 
 
-# --------- 5.C. Tree ---------
+# --------- 5.1.C. Arbre de décision Tree ---------
 ? tree()
 
 # On construit notre arbre de décision Tree
@@ -215,7 +212,7 @@ text(tree_tree, pretty=0)
 
 # Après avoir essayé différentes valeurs pour le paramètre minbucket, rester à 5 est plus pertinent.
 
-#On applique l'arbre de decision Rpart sur notre ensemble de test
+# On applique l'arbre de decision Tree sur notre ensemble de test
 test_tree_tree <- predict(tree_tree, declaration_ET, type="class")
 
 declaration_ET$tree3 <- test_tree_tree
@@ -226,12 +223,220 @@ cat("Taux de succes de l'arbre de décision Tree sur l'ensemble de test : ", tau
 
 
 
+# Comparaison des repartitions des predictions
+table(test_rpart_tree)
+table(test_c50_tree)
+table(test_tree_tree)
+# On constate que nos trois arbres de décisions rpart, c50 et tree prédise en moyenne 30 déclarations comme frauduleuses
+# Le classificateur Tree, est celui qui prédit le plus de déclarations comme frauduleuses, mais il se peut qu'il s'agisse de faux positifs, nous vérifierons cela prochainement.
+
 # Classement des classificateurs selon le taux de succès :
 # N°1 : C5.0 avec 0.7818182  %
 # N°2 : RPART avec 0.7454545  %
 # N°3 : Tree avec 0.7136364  %
 #
 # On pourrait arrêter là notre évaluation des classificateurs, et déclarer C5.0 comme le meilleur classificateur.
-# Mais, continuons tout de même notre évaluation afin d'être le plus sûr.
+# Mais, continuons tout de même notre évaluation afin d'être le plus sûr possible.
 
-# ...
+
+
+# --------- 5.2.A. Matrice de Confusion RPART ---------
+
+# Matrice de confusion pour RPART
+matrice_rpart <- table(declaration_ET$fraudulent, test_rpart_tree)
+print(matrice_rpart) 
+# Dans ce tableau nous pouvons constater la répartitions des VP, VN, FP et FN.
+# Vrais Positifs (VP) => matrice_rpart[2,2]
+# Vrais Negatifs (VN) => matrice_rpart[1,1]
+# Faux Positifs (FP) => matrice_rpart[1,2]
+# Faux Negatifs (FN) => matrice_rpart[2,1]
+
+# Calcul du rappel (VP / (VP+FN)) soit la capacité du classifieur à détecter les exemples positifs de l'ensemble de test.
+matrice_rpart[2,2]/(matrice_rpart[2,2]+matrice_rpart[2,1])
+
+# Calcul de la spécificité (VN / (VN+FP)) soit la capacité du classifieur à détecter les exemples négatifs de l'ensemble de test.
+matrice_rpart[1,1]/(matrice_rpart[1,1]+matrice_rpart[1,2])
+
+# Calcul de la précision (VP / (VP+FP)) soit la fiabilité des prédictions positives du classifieur.
+matrice_rpart[2,2]/(matrice_rpart[2,2]+matrice_rpart[1,2])
+
+# Calcul du taux de vrais négatifs (VN / (VN+FN)) soit la fiabilité des prédictions négatives du classifieur.
+matrice_rpart[1,1]/(matrice_rpart[1,1]+matrice_rpart[2,1])
+
+# Nous pouvons constater suite à ces calculs :
+#
+# La capacité du classificateur Rpart à détecter les exemples positifs de l'ensemble de test est de 0.2075472 %
+# La capacité du classificateur Rpart à détecter les exemples négatifs de l'ensemble de test est de 0.9161677 %
+# La fiabilité des prédictions positives du classificateur Rpart est de 0.44 %
+# La fiabilité des prédictions négatives du classificateur Rpart est de 0.7846154 %
+
+
+
+# --------- 5.2.B. Matrice de Confusion C50 ---------
+
+# Matrice de confusion pour C50
+matrice_c50 <- table(declaration_ET$fraudulent, test_c50_tree)
+print(matrice_c50) # Dans ce tableau nous pouvons constater la répartitions des VP, VN, FP et FN.
+
+# Calcul du rappel (VP / (VP+FN)) soit la capacité du classifieur à détecter les exemples positifs de l'ensemble de test.
+matrice_c50[2,2]/(matrice_c50[2,2]+matrice_c50[2,1])
+
+# Calcul de la spécificité (VN / (VN+FP)) soit la capacité du classifieur à détecter les exemples négatifs de l'ensemble de test.
+matrice_c50[1,1]/(matrice_c50[1,1]+matrice_c50[1,2])
+
+# Calcul de la précision (VP / (VP+FP)) soit la fiabilité des prédictions positives du classifieur.
+matrice_c50[2,2]/(matrice_c50[2,2]+matrice_c50[1,2])
+
+# Calcul du taux de vrais négatifs (VN / (VN+FN)) soit la fiabilité des prédictions négatives du classifieur.
+matrice_c50[1,1]/(matrice_c50[1,1]+matrice_c50[2,1])
+
+# Nous pouvons constater suite à ces calculs :
+#
+# La capacité du classificateur C5.0 à détecter les exemples positifs de l'ensemble de test est de 0.3018868 %
+# La capacité du classificateur C5.0 à détecter les exemples négatifs de l'ensemble de test est de 0.9341317 %
+# La fiabilité des prédictions positives du classificateur C5.0 est de 0.5925926 %
+# La fiabilité des prédictions négatives du classificateur C5.0 est de 0.8082902 %
+
+
+
+# --------- 5.2.C. Matrice de Confusion Tree ---------
+
+# Matrice de confusion pour Tree
+matrice_tree <- table(declaration_ET$fraudulent, test_tree_tree)
+print(matrice_tree) # Dans ce tableau nous pouvons constater la répartitions des VP, VN, FP et FN.
+
+# Calcul du rappel (VP / (VP+FN)) soit la capacité du classifieur à détecter les exemples positifs de l'ensemble de test.
+matrice_tree[2,2]/(matrice_tree[2,2]+matrice_tree[2,1])
+
+# Calcul de la spécificité (VN / (VN+FP)) soit la capacité du classifieur à détecter les exemples négatifs de l'ensemble de test.
+matrice_tree[1,1]/(matrice_tree[1,1]+matrice_tree[1,2])
+
+# Calcul de la précision (VP / (VP+FP)) soit la fiabilité des prédictions positives du classifieur.
+matrice_tree[2,2]/(matrice_tree[2,2]+matrice_tree[1,2])
+
+# Calcul du taux de vrais négatifs (VN / (VN+FN)) soit la fiabilité des prédictions négatives du classifieur.
+matrice_tree[1,1]/(matrice_tree[1,1]+matrice_tree[2,1])
+
+# Nous pouvons constater suite à ces calculs :
+#
+# La capacité du classificateur C5.0 à détecter les exemples positifs de l'ensemble de test est de 0.3018868 % soit la même valeur que pour C5.0
+# La capacité du classificateur C5.0 à détecter les exemples négatifs de l'ensemble de test est de 0.8562874 %
+# La fiabilité des prédictions positives du classificateur C5.0 est de 0.4 %
+# La fiabilité des prédictions négatives du classificateur C5.0 est de 0.7944444 %
+
+
+
+# Classement des classificateurs selon leurs matrices de confusions :
+#
+# Le classificateur avec le meilleur rappel : C5.0 et Tree avec 0.3018868 %
+# Le classificateur avec la meilleure spécificité : C5.0 avec 0.9341317 %
+# Le classificateur avec la meilleure précision : C5.0 avec 0.5925926 %
+# Le classificateur avec le meilleur taux de vrais négatifs : C5.0 avec 0.8082902%
+#
+# On constate une fois de plus que les resultats du classificateur C5.0 sont supérieurs à ceux des classificateurs Rpart et Tree.
+# Mais, continuons tout de même notre évaluation afin d'être le plus sûr possible.
+
+
+
+# --------- 5.3. Courbes ROC et Indices AUC ---------
+
+# Nous allons comparer nos classifieurs à l’aide des représentations graphiques de leurs performances par les courbes ROC et leur indicateur AUC associé.
+# Notre objectif est d’identifier graphiquement le classifieur le plus performant parmi plusieurs modèles de prédiction.
+
+#install.packages("ROCR")
+library(ROCR)
+
+# Génération des probabilites de prediction sur l'ensemble de test
+prob_rpart <- predict(rpart_tree, declaration_ET, type="prob")
+prob_c50 <- predict(c50_tree, declaration_ET, type="prob")
+prob_tree <- predict(tree_tree, declaration_ET, type="vector")
+# print(prob_rpart)
+# print(prob_c50)
+# print(prob_tree)
+
+# Génération des donnees necessaires pour la courbe ROC
+roc_pred_rpart <- prediction(prob_rpart[,2], declaration_ET$fraudulent)
+roc_pred_c50 <- prediction(prob_c50[,2], declaration_ET$fraudulent)
+roc_pred_tree <- prediction(prob_tree[,2], declaration_ET$fraudulent)
+
+roc_perf_rpart <- performance(roc_pred_rpart,"tpr","fpr")
+roc_perf_c50 <- performance(roc_pred_c50,"tpr","fpr")
+roc_perf_tree <- performance(roc_pred_tree,"tpr","fpr")
+
+plot(roc_perf_rpart, col = "lightblue")
+plot(roc_perf_c50, col = "orange", add = TRUE)
+plot(roc_perf_tree, col = "green", add = TRUE)
+
+# Nous pouvons constater que le classificateur le plus performant est C5.0
+# Mais pourquoi ?
+# Sur le graphique nous pouvons constaster que la courbe orange soit C5.0 est la plus proche de l'angle haut gauche
+# de plus cette courbe est celle qui montre la plus grande ascension dans le délai le plus court.
+
+# Une fois de plus le classificateur C5.0 est le plus performant et de loin, cependant si on avait plusieurs courbes similaires
+# Le moyen d'identifier le classificateur le plus performant aurait été avec le calcul de leurs AUC.
+
+auc_rpart <- performance(roc_pred_rpart, "auc")
+str(auc_rpart)
+attr(auc_rpart, "y.values")
+
+auc_c50 <- performance(roc_pred_c50, "auc")
+str(auc_c50)
+attr(auc_c50, "y.values")
+
+auc_tree <- performance(roc_pred_tree, "auc")
+str(auc_tree)
+attr(auc_tree, "y.values")
+
+text(0.5, 0.5, paste("AUC RPART =", attr(auc_rpart, "y.values")))
+text(0.5, 0.4, paste("AUC C5.0 =", attr(auc_c50, "y.values")))
+text(0.5, 0.3, paste("AUC Tree =", attr(auc_tree, "y.values")))
+legend("bottomright", legend=c("RPART", "C5.0", "Tree"), col=c("lightblue", "orange", "green"), lwd=2)
+# Le classificateur avec le meilleur indice de performance AUC est C5.0 avec 0.6792453 %.
+
+
+
+# --------- 6. Choix du classifieur le plus performant  ---------
+
+# Sur la base des résultats de nos calculs, nous pouvons affirmer,
+# Le classificateur qui c'est montré le performant dans la prediction de déclarations frauduleuses est : C5.0.
+# C'est donc ce classificateur que nous utiliserons pour la prédiction des déclarations frauduleuses.
+
+
+
+# --------- 7. Application du classifieur aux données à prédire  ---------
+
+# À présent que nous identifier le classificateur que nous alons utiliser, il est temps de l'appliquer aux données à prédire pour identifier les déclarations frauduleuses.
+
+# Chargement des données pour prediction dans un data frame "declarations_a_predire"
+declarations_a_predire <- read.csv("donnees_a_predire.csv", header = TRUE, sep = ",", dec = ".", stringsAsFactors = TRUE)
+
+View(declarations_a_predire)
+
+# Vérification du chargement des données dans le data frame declarations_a_predire en affichant la liste des variables et leur type
+str(declarations_a_predire)
+
+# On applique l'arbre de decision C50 sur notre ensemble à prédire pour trouver les classes
+resultat_classe <- predict(c50_tree, declarations_a_predire, type="class")
+
+table(resultat)
+# On constate après application que 15 déclarations sur 200 sont frauduleuses.
+
+# On applique l'arbre de decision C50 sur notre ensemble à prédire pour trouver les probabilités
+resultat_prob <- predict(c50_tree, declarations_a_predire, type="prob")
+
+# On ajoute nous prédictions dans deux nouvelles colonnes de l'ensemble à prédire
+declarations_a_predire$fraudulent <- resultat_classe
+declarations_a_predire$probabilite <- resultat_prob
+
+# Visualisation de l'ensemble à prédire
+View(declarations_a_predire)
+
+# Exportons pour finir le résultat de nos prédiction dans un fichier au format .CSV
+data_frame <- data.frame(customer_id = declarations_a_predire$customer_id, fraudulent = resultat_classe, probabilite = resultat_prob)
+
+fichier_csv <- "resultats_predictions_hakobyan_ngnama.csv"
+
+? write()
+
+# Ecriture du fichier
+write.table(data_frame, fichier_csv, sep=",", dec=".", row.names = FALSE)
