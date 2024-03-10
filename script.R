@@ -339,10 +339,10 @@ matrice_tree[1,1]/(matrice_tree[1,1]+matrice_tree[2,1])
 
 # Nous pouvons constater suite à ces calculs :
 #
-# La capacité du classificateur C5.0 à détecter les exemples positifs de l'ensemble de test est de 0.3018868 % soit la même valeur que pour C5.0
-# La capacité du classificateur C5.0 à détecter les exemples négatifs de l'ensemble de test est de 0.8562874 %
-# La fiabilité des prédictions positives du classificateur C5.0 est de 0.4 %
-# La fiabilité des prédictions négatives du classificateur C5.0 est de 0.7944444 %
+# La capacité du classificateur Tree à détecter les exemples positifs de l'ensemble de test est de 0.3018868 % soit la même valeur que pour Tree
+# La capacité du classificateur Tree à détecter les exemples négatifs de l'ensemble de test est de 0.8562874 %
+# La fiabilité des prédictions positives du classificateur Tree est de 0.4 %
+# La fiabilité des prédictions négatives du classificateur Tree est de 0.7944444 %
 
 
 
