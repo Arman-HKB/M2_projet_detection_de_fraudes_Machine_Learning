@@ -1,5 +1,5 @@
 # Projet arbre de décision detection de fraude
-# UE : Machin Learning, Mr. Pasquier
+# UE : Machine Learning, Mr. Pasquier
 # Auteurs : Arman Hakobyan et Essotolom N'Gnama
 # Formation : Master 2 MIAGE parcours SIRIS
 
@@ -28,6 +28,11 @@ str(declarations_etude)
 # On retire lles deux premières colonnes car nous ne les estimons pas utiles pour la prédiction
 declarations_etude <- declarations_etude[,-(1:2)]
 str(declarations_etude)
+
+# TEST -------------- 
+# On retire les variables avec une importance de de moins de 15%
+#declarations_etude <- subset(declarations_etude, select = -c(gender, incident_cause, days_to_incident, claim_area, total_policy_claims))
+# FIN TEST -------------------
 
 # On visualise le data frame pour essayer de détecter des anomalies visuellement (dans un premier temps)
 View(declarations_etude)
@@ -186,6 +191,21 @@ c50_tree <- C5.0(fraudulent ~., declaration_EA, control = C5.0Control(minCases =
 
 # On affiche graphiquement l'abre de décision avec la fonction plot()
 plot(c50_tree)
+
+# TEST ---------------
+# On installe caret pour utiliser la fonction varImp qui retourne le %tage d'imporance des variables d'un data frame pour la classification
+#install.packages("caret")
+library(caret)
+
+importance <- varImp(c50_tree)
+print(importance)
+# On remarque que la moitié des variables ne sont pas importantes (valeur = 0%)
+# Au cours d'un test où nous avons gardé uniquement les variables avec plus de 15% d'importance
+# Le resultat était le suivant :
+# - C5.0 est le classificateur le plus performant
+# - le taux de succès de C5.0 a augmenté de 2%
+# - la matrice de confusion, la courbe ROC et l'indice AUC ont diminués de 4-5%
+# FIN TEST -------------------
 
 # Après avoir essayé différentes valeurs pour le paramètre minbucket, rester à 5 est plus pertinent.
 
@@ -418,7 +438,7 @@ str(declarations_a_predire)
 # On applique l'arbre de decision C50 sur notre ensemble à prédire pour trouver les classes
 resultat_classe <- predict(c50_tree, declarations_a_predire, type="class")
 
-table(resultat)
+table(resultat_classe)
 # On constate après application que 15 déclarations sur 200 sont frauduleuses.
 
 # On applique l'arbre de decision C50 sur notre ensemble à prédire pour trouver les probabilités
